@@ -1,1 +1,6 @@
-.prediction/House_Price.csv
+.prediction/Housing.csv
+.prediction/house_price_clean.csv
+.venv/
+__pycache__/
+.qodo/
+.prediction/append_synthetic.py
