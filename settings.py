@@ -2,9 +2,9 @@ import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
-SECRET_KEY = ''
-DEBUG = True
-ALLOWED_HOSTS = []
+SECRET_KEY = 'your-secret-key-change-this-in-production'
+DEBUG = True  # Set to False in production
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']  # Add your domain in production
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -53,3 +53,10 @@ DATABASES = {
 STATIC_URL = 'static/'
 
 ROOT_URLCONF = 'urls'
+
+# Celery Configuration
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'

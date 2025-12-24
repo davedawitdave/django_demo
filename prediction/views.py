@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from .models import HousePricePredictor
+from .ml_service import HousePricePredictor
 
 def home(request):
     """Renders the main input form."""

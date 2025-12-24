@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 import os
-from .models import HousePricePredictor
+from .ml_service import HousePricePredictor
 
 class PredictionTests(TestCase):
     def setUp(self):
