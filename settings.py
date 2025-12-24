@@ -13,7 +13,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'prediction', # Your app
+    'prediction', # House price prediction app
 ]
 
 MIDDLEWARE = [
