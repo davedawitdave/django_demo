@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
-SECRET_KEY = 'your-secret-key'
+SECRET_KEY = ''
 DEBUG = True
 ALLOWED_HOSTS = []
 
@@ -26,7 +26,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# Ensure Django looks for templates in your app folders
+# Ensure Django looks for templates in the app folders
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

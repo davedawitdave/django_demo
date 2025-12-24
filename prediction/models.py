@@ -9,6 +9,9 @@ from sklearn.linear_model import LinearRegression
 from apscheduler.schedulers.background import BackgroundScheduler
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 1. Database Model
 class HousePrice(models.Model):
@@ -36,28 +39,36 @@ class HousePricePredictor:
         self.last_trained_row_count = 0 
 
     def train(self, reason="Scheduled"):
-        if not os.path.exists(self.csv_path):
-            return
-        
-        df = pd.read_csv(self.csv_path)
-        current_row_count = len(df)
-        
-        # Training logic
-        X = df.drop('price', axis=1)
-        y = df['price']
-        
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-        scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train)
-        
-        model = LinearRegression()
-        model.fit(X_train_scaled, y_train)
-        
-        joblib.dump(model, self.model_path)
-        joblib.dump(scaler, self.scaler_path)
-        
-        self.last_trained_row_count = current_row_count
-        print(f"--- Model Retrained ({reason}). Total Rows: {current_row_count} ---")
+        try:
+            if not os.path.exists(self.csv_path):
+                logger.warning("CSV file not found, skipping training.")
+                return
+            
+            df = pd.read_csv(self.csv_path)
+            if df.empty or 'price' not in df.columns:
+                logger.warning("Invalid CSV data, skipping training.")
+                return
+            
+            current_row_count = len(df)
+            
+            # Training logic
+            X = df.drop('price', axis=1)
+            y = df['price']
+            
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            scaler = StandardScaler()
+            X_train_scaled = scaler.fit_transform(X_train)
+            
+            model = LinearRegression()
+            model.fit(X_train_scaled, y_train)
+            
+            joblib.dump(model, self.model_path)
+            joblib.dump(scaler, self.scaler_path)
+            
+            self.last_trained_row_count = current_row_count
+            logger.info(f"--- Model Retrained ({reason}). Total Rows: {current_row_count} ---")
+        except Exception as e:
+            logger.error(f"Error during training: {e}")
 
     def check_for_new_data(self):
         """Checks if 20 or more new rows have been added."""
@@ -68,22 +79,26 @@ class HousePricePredictor:
 
     def predict(self, features):
         """Predict house price based on input features."""
-        if not os.path.exists(self.model_path) or not os.path.exists(self.scaler_path):
-            raise FileNotFoundError("Model or scaler not found. Please train the model first.")
-        
-        model = joblib.load(self.model_path)
-        scaler = joblib.load(self.scaler_path)
-        
-        features_scaled = scaler.transform([features])
-        prediction = model.predict(features_scaled)
-        return prediction[0]
+        try:
+            if not os.path.exists(self.model_path) or not os.path.exists(self.scaler_path):
+                raise FileNotFoundError("Model or scaler not found. Please train the model first.")
+            
+            model = joblib.load(self.model_path)
+            scaler = joblib.load(self.scaler_path)
+            
+            features_scaled = scaler.transform([features])
+            prediction = model.predict(features_scaled)
+            return prediction[0]
+        except Exception as e:
+            logger.error(f"Error during prediction: {e}")
+            return None
 
 # 3. File Watcher (Detects New CSV Files)
 class NewFileHandler(FileSystemEventHandler):
     def on_created(self, event):
         if event.is_directory: return
         if event.src_path.endswith('.csv'):
-            print(f"New CSV detected: {event.src_path}")
+            logger.info(f"New CSV detected: {event.src_path}")
             predictor = HousePricePredictor()
             predictor.train(reason="New File Detected")
 
@@ -91,11 +106,11 @@ def start_orchestration():
     predictor = HousePricePredictor()
     scheduler = BackgroundScheduler()
     
-    # Trigger 1: Every 4 hours
-    scheduler.add_job(predictor.train, 'interval', hours=4)
+    # Trigger 1: Every 10 minutes
+    scheduler.add_job(predictor.train, 'interval', minutes=10)
     
     # Trigger 2: Check row count every 10 minutes
-    scheduler.add_job(predictor.check_for_new_data, 'interval', minutes=1)
+    scheduler.add_job(predictor.check_for_new_data, 'interval', minutes=10)
     
     scheduler.start()
 
