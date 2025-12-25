@@ -19,7 +19,26 @@ class HousePricePredictor:
         self.csv_path = os.path.join(self.dir_path, 'house_price_clean.csv')
         self.model_path = os.path.join(self.dir_path, 'ml_model.joblib')
         self.scaler_path = os.path.join(self.dir_path, 'scaler.joblib')
-        self.last_trained_row_count = 0
+        self.training_state_path = os.path.join(self.dir_path, 'training_state.txt')
+        self.last_trained_row_count = self._load_training_state()
+
+    def _load_training_state(self):
+        """Load the last trained row count from file."""
+        if os.path.exists(self.training_state_path):
+            try:
+                with open(self.training_state_path, 'r') as f:
+                    return int(f.read().strip())
+            except (ValueError, IOError):
+                return 0
+        return 0
+
+    def _save_training_state(self):
+        """Save the current trained row count to file."""
+        try:
+            with open(self.training_state_path, 'w') as f:
+                f.write(str(self.last_trained_row_count))
+        except IOError:
+            logger.warning("Could not save training state")
 
     def train(self, reason="Scheduled"):
         try:
@@ -49,16 +68,25 @@ class HousePricePredictor:
             joblib.dump(scaler, self.scaler_path)
 
             self.last_trained_row_count = current_row_count
+            self._save_training_state()
             logger.info(f"--- Model Retrained ({reason}). Total Rows: {current_row_count} ---")
         except Exception as e:
             logger.error(f"Error during training: {e}")
 
     def check_for_new_data(self):
-        """Checks if 20 or more new rows have been added."""
+        """Checks if new rows have been added and retrains if needed."""
         if os.path.exists(self.csv_path):
             df = pd.read_csv(self.csv_path)
-            if len(df) >= self.last_trained_row_count + 20:
-                self.train(reason="20 New Rows Detected")
+            current_count = len(df)
+
+            logger.info(f"Current row count: {current_count}, Last trained: {self.last_trained_row_count}")
+
+            # Retrain if we have 10 or more new rows (reduced threshold for more responsiveness)
+            if current_count >= self.last_trained_row_count + 10:
+                logger.info(f"Detected {current_count - self.last_trained_row_count} new rows, retraining model...")
+                self.train(reason=f"{current_count - self.last_trained_row_count} New Rows Detected")
+            else:
+                logger.debug("No significant new data detected")
 
     def predict(self, features):
         """Predict house price based on input features."""
@@ -76,14 +104,39 @@ class HousePricePredictor:
             logger.error(f"Error during prediction: {e}")
             return None
 
-# File Watcher (Detects New CSV Files)
-class NewFileHandler(FileSystemEventHandler):
+# File Watcher (Detects CSV File Changes)
+class CSVFileHandler(FileSystemEventHandler):
+    def __init__(self, csv_path):
+        super().__init__()
+        self.csv_path = csv_path
+
+    def on_modified(self, event):
+        if event.is_directory: return
+        if event.src_path.endswith('house_price_clean.csv'):
+            logger.info(f"CSV file modified: {event.src_path}")
+            predictor = HousePricePredictor()
+            predictor.check_for_new_data()
+
     def on_created(self, event):
         if event.is_directory: return
-        if event.src_path.endswith('.csv'):
+        if event.src_path.endswith('house_price_clean.csv'):
             logger.info(f"New CSV detected: {event.src_path}")
             predictor = HousePricePredictor()
-            predictor.train(reason="New File Detected")
+            predictor.train(reason="New CSV File Detected")
+
+# Function to start file watcher
+def start_csv_watcher():
+    """Start watching the CSV file for changes."""
+    predictor = HousePricePredictor()
+    csv_dir = os.path.dirname(predictor.csv_path)
+
+    event_handler = CSVFileHandler(predictor.csv_path)
+    observer = Observer()
+    observer.schedule(event_handler, csv_dir, recursive=False)
+    observer.start()
+
+    logger.info(f"Started watching CSV file: {predictor.csv_path}")
+    return observer
 
 
 # Celery periodic tasks

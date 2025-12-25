@@ -1,4 +1,2 @@
-# Load Celery app when Django starts
-from prediction.celery_app import app as celery_app
-
-__all__ = ('celery_app',)
+# Celery app is loaded by celery command, not here
+# This avoids circular import issues when running Celery standalone

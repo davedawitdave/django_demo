@@ -7,7 +7,7 @@ A Django web application for predicting house prices using machine learning. Fea
 - **Web Interface**: Simple form to input house features and get price predictions.
 - **ML Model**: LinearRegression trained on house price dataset.
 - **Synthetic Data Generation**: Adds realistic synthetic rows to expand the dataset.
-- **Automated Retraining**: Celery scheduler checks for new data every 10 minutes and retrains if 20+ rows added.
+- **Automated Retraining**: Real-time file watcher + Celery scheduler checks for new data every 2 minutes and retrains if 10+ rows added.
 - **Data Cleaning**: Automatically removes rows with negative values.
 
 ## Setup
@@ -32,21 +32,25 @@ A Django web application for predicting house prices using machine learning. Fea
    python manage.py runserver
    ```
 
-### Optional: Enable Automated Retraining (Requires Redis)
+### Optional: Enable Advanced Automated Retraining (Requires Redis)
+
+**Note:** Basic automatic retraining works with just the Django server. For advanced features, set up Redis + Celery:
 
 1. **Start Redis Server**:
    ```bash
    redis-server
    ```
 
-2. **Start Celery Worker** (in a separate terminal):
+2. **Start Celery Worker** (from project root directory):
    ```bash
-   celery -A prediction.celery_app worker --loglevel=info
+   cd /home/dawit/training_ai/ml_django
+   PYTHONPATH=/home/dawit/training_ai/ml_django:$PYTHONPATH celery -A django_demo.prediction.celery_app worker --loglevel=info
    ```
 
 3. **Start Celery Beat** (in another terminal):
    ```bash
-   celery -A prediction.celery_app beat --loglevel=info
+   cd /home/dawit/training_ai/ml_django
+   PYTHONPATH=/home/dawit/training_ai/ml_django:$PYTHONPATH celery -A django_demo.prediction.celery_app beat --loglevel=info
    ```
 
 ## Usage
@@ -54,7 +58,7 @@ A Django web application for predicting house prices using machine learning. Fea
 - Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/) in your browser.
 - Fill the prediction form with house details and submit to get estimated price.
 - To add synthetic data: `python prediction/append_synthetic.py` (appends 20 rows, cleans negatives).
-- The model retrains automatically if new data is detected (when using Celery).
+- **Automatic Retraining**: Model retrains automatically when 10+ new rows are added to the CSV (works immediately with Django server, or every 2 minutes with Celery).
 
 ## Technologies
 

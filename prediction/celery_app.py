@@ -14,8 +14,8 @@ app.conf.beat_schedule = {
 		'task': 'prediction.ml_service.celery_train_model',
 		'schedule': crontab(minute='*/10'),
 	},
-	'check-new-data-every-10-minutes': {
+	'check-new-data-every-2-minutes': {
 		'task': 'prediction.ml_service.celery_check_for_new_data',
-		'schedule': crontab(minute='*/10'),
+		'schedule': crontab(minute='*/2'),  # Check every 2 minutes for more responsiveness
 	},
 }
