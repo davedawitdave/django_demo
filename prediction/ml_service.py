@@ -116,8 +116,8 @@ class HousePricePredictor:
                         return float(lines[1].strip())
             except (ValueError, IOError) as e:
                 logger.warning(f"Error reading training state: {e}")
-        return 0
-        
+        return 0 
+    
     def _save_training_state(self):
         """Save the current trained row count and timestamp to file."""
         try:
