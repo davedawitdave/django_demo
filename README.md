@@ -32,30 +32,11 @@ A Django web application for predicting house prices using machine learning. Fea
    python manage.py runserver
    ```
 
-### Optional: Enable Advanced Automated Retraining (Requires Redis)
 
-**Note:** Basic automatic retraining works with just the Django server. For advanced features, set up Redis + Celery:
-
-1. **Start Redis Server**:
-   ```bash
-   redis-server
-   ```
-
-2. **Start Celery Worker** (from project root directory):
-   ```bash
-   cd /home/dawit/training_ai/ml_django
-   PYTHONPATH=/home/dawit/training_ai/ml_django:$PYTHONPATH celery -A django_demo.prediction.celery_app worker --loglevel=info
-   ```
-
-3. **Start Celery Beat** (in another terminal):
-   ```bash
-   cd /home/dawit/training_ai/ml_django
-   PYTHONPATH=/home/dawit/training_ai/ml_django:$PYTHONPATH celery -A django_demo.prediction.celery_app beat --loglevel=info
-   ```
 
 ## Usage
 
-- Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/) in your browser.
+- Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/) in your browser*(or your choosen port).
 - Fill the prediction form with house details and submit to get estimated price.
 - To add synthetic data: `python prediction/append_synthetic.py` (appends 20 rows, cleans negatives).
 - **Automatic Retraining**: Model retrains automatically when 10+ new rows are added to the CSV (works immediately with Django server, or every 2 minutes with Celery).
@@ -67,4 +48,4 @@ A Django web application for predicting house prices using machine learning. Fea
 - pandas
 - Celery
 - Redis
-- watchdog
+- watchdogs
