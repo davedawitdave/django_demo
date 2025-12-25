@@ -75,18 +75,57 @@ class HousePricePredictor:
 
     def check_for_new_data(self):
         """Checks if new rows have been added and retrains if needed."""
-        if os.path.exists(self.csv_path):
+        if not os.path.exists(self.csv_path):
+            logger.warning("CSV file not found")
+            return
+            
+        try:
             df = pd.read_csv(self.csv_path)
             current_count = len(df)
-
-            logger.info(f"Current row count: {current_count}, Last trained: {self.last_trained_row_count}")
-
-            # Retrain if we have 10 or more new rows (reduced threshold for more responsiveness)
-            if current_count >= self.last_trained_row_count + 10:
-                logger.info(f"Detected {current_count - self.last_trained_row_count} new rows, retraining model...")
-                self.train(reason=f"{current_count - self.last_trained_row_count} New Rows Detected")
+            
+            # Get file modification time
+            file_mtime = os.path.getmtime(self.csv_path)
+            last_trained_time = self._get_last_trained_time()
+            
+            logger.info(f"Current rows: {current_count}, Last trained rows: {self.last_trained_row_count}")
+            logger.info(f"File modified: {file_mtime}, Last trained: {last_trained_time}")
+            
+            # Retrain if:
+            # 1. This is the first training, or
+            # 2. The CSV file has been modified since last training, or
+            # 3. The row count has changed
+            if (self.last_trained_row_count == 0 or 
+                file_mtime > last_trained_time or 
+                current_count != self.last_trained_row_count):
+                
+                logger.info(f"Changes detected. Retraining model...")
+                self.train(reason="Data changes detected")
             else:
-                logger.debug("No significant new data detected")
+                logger.debug("No changes detected in the dataset")
+                
+        except Exception as e:
+            logger.error(f"Error checking for new data: {e}")
+    
+    def _get_last_trained_time(self):
+        """Get the last time the model was trained."""
+        if os.path.exists(self.training_state_path):
+            try:
+                with open(self.training_state_path, 'r') as f:
+                    lines = f.readlines()
+                    if len(lines) >= 2:
+                        return float(lines[1].strip())
+            except (ValueError, IOError) as e:
+                logger.warning(f"Error reading training state: {e}")
+        return 0
+        
+    def _save_training_state(self):
+        """Save the current trained row count and timestamp to file."""
+        try:
+            with open(self.training_state_path, 'w') as f:
+                f.write(f"{self.last_trained_row_count}\n")
+                f.write(f"{time.time()}\n")  # Save current timestamp
+        except IOError as e:
+            logger.warning(f"Could not save training state: {e}")
 
     def predict(self, features):
         """Predict house price based on input features."""
